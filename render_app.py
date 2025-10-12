@@ -174,36 +174,98 @@ def perform_recharge():
         time.sleep(3)
         
         log_step(7, "ENTERING UPI ID FOR GOOGLE PAY", f"UPI ID: {UPI_ID}")
-        print("   ⏳ Waiting for VPA ID input field to appear...")
-        time.sleep(3)  # Wait for Google Pay form to load
+        print("   ⏳ Waiting for Google Pay form to load...")
+        time.sleep(5)  # Increased wait time for form to load
         
-        # Find VPA ID input field - using exact same method as simple_recharge.py
-        print("   🔍 Searching for VPA ID input field...")
-        upi_input = wait.until(
-            EC.element_to_be_clickable((By.XPATH, 
-                "//input[contains(@placeholder, 'VPA') or contains(@placeholder, 'vpa') or contains(@name, 'vpa') or contains(@id, 'vpa') or "
-                "contains(@placeholder, 'UPI') or contains(@placeholder, 'upi') or contains(@name, 'upi') or contains(@id, 'upi') or "
-                "contains(translate(@placeholder, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'enter vpa') or "
-                "contains(translate(@placeholder, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'enter upi')]"))
-        )
-        print(f"   ✓ Found VPA ID input field!")
-        print(f"   ✓ Placeholder: {upi_input.get_attribute('placeholder')}")
+        # Debug: Check current page state
+        print(f"   🔍 Current URL: {driver.current_url}")
+        print(f"   🔍 Page title: {driver.title}")
         
-        # Just paste the UPI ID directly - no clearing, no extra steps
-        print(f"   ✓ Pasting UPI ID: {UPI_ID}")
-        upi_input.send_keys(UPI_ID)
-        time.sleep(0.5)
+        # Debug: Find all input fields on the page
+        print("   🔍 Searching for all input fields on the page...")
+        all_inputs = driver.find_elements(By.XPATH, "//input")
+        print(f"   📊 Found {len(all_inputs)} total input fields")
         
-        # Verify the value
-        entered_value = upi_input.get_attribute('value')
-        print(f"   ✓ UPI ID in field: '{entered_value}'")
-        print(f"   ✅ UPI ID pasted successfully!")
+        for idx, inp in enumerate(all_inputs[:10]):  # Check first 10 inputs
+            try:
+                inp_type = inp.get_attribute('type') or 'unknown'
+                inp_placeholder = inp.get_attribute('placeholder') or 'no placeholder'
+                inp_name = inp.get_attribute('name') or 'no name'
+                inp_id = inp.get_attribute('id') or 'no id'
+                print(f"     Input {idx+1}: type='{inp_type}' placeholder='{inp_placeholder}' name='{inp_name}' id='{inp_id}'")
+            except:
+                print(f"     Input {idx+1}: Could not get attributes")
         
-        # Press Enter to submit
-        print("   ✓ Pressing Enter to submit...")
-        upi_input.send_keys(Keys.RETURN)
-        print("   ✅ Enter pressed!")
-        time.sleep(1)
+        # Strategy 1: Primary VPA/UPI search (same as simple_recharge.py)
+        upi_input = None
+        try:
+            print("   🔍 Strategy 1: Searching for VPA/UPI specific fields...")
+            upi_input = wait.until(
+                EC.element_to_be_clickable((By.XPATH, 
+                    "//input[contains(@placeholder, 'VPA') or contains(@placeholder, 'vpa') or contains(@name, 'vpa') or contains(@id, 'vpa') or "
+                    "contains(@placeholder, 'UPI') or contains(@placeholder, 'upi') or contains(@name, 'upi') or contains(@id, 'upi') or "
+                    "contains(translate(@placeholder, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'enter vpa') or "
+                    "contains(translate(@placeholder, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'enter upi')]"))
+            )
+            print("   ✅ Strategy 1 SUCCESS: Found VPA/UPI field!")
+        except TimeoutException:
+            print("   ⚠️  Strategy 1 FAILED: VPA/UPI field not found")
+            
+            # Strategy 2: Look for any text input
+            try:
+                print("   🔍 Strategy 2: Looking for any text input...")
+                text_inputs = driver.find_elements(By.XPATH, "//input[@type='text']")
+                if text_inputs:
+                    upi_input = text_inputs[0]  # Take the first text input
+                    print(f"   ✅ Strategy 2 SUCCESS: Found text input with placeholder '{upi_input.get_attribute('placeholder')}'")
+                else:
+                    print("   ⚠️  Strategy 2 FAILED: No text inputs found")
+            except:
+                print("   ⚠️  Strategy 2 ERROR")
+                
+                # Strategy 3: Look for email input
+                try:
+                    print("   🔍 Strategy 3: Looking for email input...")
+                    email_inputs = driver.find_elements(By.XPATH, "//input[@type='email']")
+                    if email_inputs:
+                        upi_input = email_inputs[0]
+                        print(f"   ✅ Strategy 3 SUCCESS: Found email input")
+                    else:
+                        print("   ⚠️  Strategy 3 FAILED: No email inputs found")
+                except:
+                    print("   ⚠️  Strategy 3 ERROR")
+        
+        if upi_input:
+            print(f"   ✓ Found UPI input field!")
+            print(f"   ✓ Type: {upi_input.get_attribute('type')}")
+            print(f"   ✓ Placeholder: {upi_input.get_attribute('placeholder')}")
+            print(f"   ✓ Name: {upi_input.get_attribute('name')}")
+            
+            # Just paste the UPI ID directly - no clearing, no extra steps
+            print(f"   ✓ Pasting UPI ID: {UPI_ID}")
+            upi_input.send_keys(UPI_ID)
+            time.sleep(0.5)
+            
+            # Verify the value
+            entered_value = upi_input.get_attribute('value')
+            print(f"   ✓ UPI ID in field: '{entered_value}'")
+            print(f"   ✅ UPI ID pasted successfully!")
+            
+            # Press Enter to submit
+            print("   ✓ Pressing Enter to submit...")
+            upi_input.send_keys(Keys.RETURN)
+            print("   ✅ Enter pressed!")
+            time.sleep(1)
+        else:
+            # Final fallback: Take a screenshot for debugging (in headless mode, this saves to file)
+            try:
+                screenshot_path = "/tmp/debug_screenshot.png"
+                driver.save_screenshot(screenshot_path)
+                print(f"   📸 Debug screenshot saved to {screenshot_path}")
+            except:
+                pass
+            
+            return False, "Could not find UPI input field with any strategy. Check logs for input field details."
         
         log_step(8, "PAYMENT REQUEST INITIATED", "Waiting for payment confirmation screen...")
         print("   ⏳ Waiting for Google Pay payment request to be triggered...")

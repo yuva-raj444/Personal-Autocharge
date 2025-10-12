@@ -37,22 +37,79 @@ def perform_recharge():
     try:
         log_step(0, "INITIALIZING HEADLESS BROWSER", "Setting up Chrome for cloud deployment")
         
-        # Setup Chrome options for cloud deployment (headless)
+        # Enhanced Chrome options for cloud deployment
         chrome_options = Options()
-        chrome_options.add_argument('--headless')  # Required for cloud hosting
+        
+        # Core headless options
+        chrome_options.add_argument('--headless=new')  # Use new headless mode
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-gpu')
+        
+        # Memory and performance optimizations
+        chrome_options.add_argument('--memory-pressure-off')
+        chrome_options.add_argument('--max_old_space_size=4096')
+        chrome_options.add_argument('--disable-background-timer-throttling')
+        chrome_options.add_argument('--disable-backgrounding-occluded-windows')
+        chrome_options.add_argument('--disable-renderer-backgrounding')
+        
+        # Security and stability options  
+        chrome_options.add_argument('--disable-extensions')
+        chrome_options.add_argument('--disable-plugins')
+        chrome_options.add_argument('--disable-images')  # Disable images to save bandwidth
+        chrome_options.add_argument('--disable-default-apps')
+        
+        # Keep JavaScript enabled for Jio website functionality
+        # chrome_options.add_argument('--disable-javascript')  # Commented out - Jio needs JS
+        
+        # Browser window and display settings
         chrome_options.add_argument('--window-size=1920,1080')
+        chrome_options.add_argument('--start-maximized')
+        
+        # Anti-detection settings
         chrome_options.add_argument('--disable-blink-features=AutomationControlled')
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option('useAutomationExtension', False)
         
-        print("   ✓ Chrome options configured for cloud (HEADLESS MODE)")
+        # User data directory
+        chrome_options.add_argument('--user-data-dir=/tmp/chrome-user-data')
         
-        # Initialize the Chrome driver
-        driver = webdriver.Chrome(options=chrome_options)
-        wait = WebDriverWait(driver, 20)
+        # Additional stability options for cloud environment
+        chrome_options.add_argument('--single-process')
+        chrome_options.add_argument('--disable-features=VizDisplayCompositor')
+        chrome_options.add_argument('--disable-ipc-flooding-protection')
+        
+        print("   ✓ Enhanced Chrome options configured for cloud (HEADLESS MODE)")
+        
+        # Initialize Chrome with explicit timeout and error handling
+        try:
+            print("   🚀 Initializing Chrome WebDriver...")
+            driver = webdriver.Chrome(options=chrome_options)
+            driver.set_page_load_timeout(30)  # 30 second timeout for page loads
+            wait = WebDriverWait(driver, 25)  # Increased wait time
+            
+            # Test if Chrome is working
+            print("   🔍 Testing Chrome initialization...")
+            driver.get("data:text/html,<html><body><h1>Chrome Test</h1></body></html>")
+            
+        except Exception as chrome_error:
+            print(f"   ❌ Chrome initialization failed: {str(chrome_error)}")
+            
+            # Fallback: Try simpler Chrome options
+            print("   🔄 Trying fallback Chrome configuration...")
+            if driver:
+                driver.quit()
+            
+            fallback_options = Options()
+            fallback_options.add_argument('--headless=new')
+            fallback_options.add_argument('--no-sandbox')
+            fallback_options.add_argument('--disable-dev-shm-usage')
+            fallback_options.add_argument('--disable-gpu')
+            fallback_options.add_argument('--single-process')
+            
+            driver = webdriver.Chrome(options=fallback_options)
+            driver.set_page_load_timeout(30)
+            wait = WebDriverWait(driver, 25)
         
         print("   ✓ Headless Chrome browser launched successfully!")
         

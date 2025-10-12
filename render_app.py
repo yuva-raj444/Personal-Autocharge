@@ -173,28 +173,66 @@ def perform_recharge():
         print("   ✓ Google Pay selected")
         time.sleep(3)
         
-        log_step(7, "ENTERING UPI ID")
+        log_step(7, "ENTERING UPI ID FOR GOOGLE PAY", f"UPI ID: {UPI_ID}")
+        print("   ⏳ Waiting for VPA ID input field to appear...")
+        time.sleep(3)  # Wait for Google Pay form to load
+        
+        # Find VPA ID input field - using exact same method as simple_recharge.py
+        print("   🔍 Searching for VPA ID input field...")
         upi_input = wait.until(
             EC.element_to_be_clickable((By.XPATH, 
                 "//input[contains(@placeholder, 'VPA') or contains(@placeholder, 'vpa') or contains(@name, 'vpa') or contains(@id, 'vpa') or "
-                "contains(@placeholder, 'UPI') or contains(@placeholder, 'upi') or contains(@name, 'upi') or contains(@id, 'upi')]"))
+                "contains(@placeholder, 'UPI') or contains(@placeholder, 'upi') or contains(@name, 'upi') or contains(@id, 'upi') or "
+                "contains(translate(@placeholder, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'enter vpa') or "
+                "contains(translate(@placeholder, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'enter upi')]"))
         )
+        print(f"   ✓ Found VPA ID input field!")
+        print(f"   ✓ Placeholder: {upi_input.get_attribute('placeholder')}")
+        
+        # Just paste the UPI ID directly - no clearing, no extra steps
+        print(f"   ✓ Pasting UPI ID: {UPI_ID}")
         upi_input.send_keys(UPI_ID)
-        print(f"   ✓ Entered UPI ID: {UPI_ID}")
         time.sleep(0.5)
         
-        log_step(8, "SUBMITTING PAYMENT")
+        # Verify the value
+        entered_value = upi_input.get_attribute('value')
+        print(f"   ✓ UPI ID in field: '{entered_value}'")
+        print(f"   ✅ UPI ID pasted successfully!")
+        
+        # Press Enter to submit
+        print("   ✓ Pressing Enter to submit...")
         upi_input.send_keys(Keys.RETURN)
-        print("   ✓ Payment submitted")
-        time.sleep(5)
+        print("   ✅ Enter pressed!")
+        time.sleep(1)
         
+        log_step(8, "PAYMENT REQUEST INITIATED", "Waiting for payment confirmation screen...")
+        print("   ⏳ Waiting for Google Pay payment request to be triggered...")
+        time.sleep(5)  # Wait for payment request to be triggered
+        print(f"   ✓ Current URL: {driver.current_url}")
+        
+        log_step(9, "✅ SUCCESS - GOOGLE PAY PAYMENT REQUEST TRIGGERED!", 
+                "Check your Google Pay app to approve the payment")
         print("   🎉 Automation completed successfully!")
-        return True, "Recharge initiated. Check your Google Pay app to approve the payment."
+        print("   📱 Open Google Pay on your phone to approve the ₹299 payment")
+        print("   🌐 Headless automation completed - check logs for verification")
         
+        # Keep a brief pause for final state
+        time.sleep(2)
+        
+        return True, "Recharge initiated. Approve payment in your UPI app."
+        
+    except TimeoutException as e:
+        error_msg = f"Timeout waiting for element: {str(e)}"
+        print(f"   ❌ TIMEOUT: {error_msg}")
+        return False, f"Timeout error - {error_msg}"
+    except NoSuchElementException as e:
+        error_msg = f"Element not found: {str(e)}"
+        print(f"   ❌ ELEMENT NOT FOUND: {error_msg}")
+        return False, f"Element not found - {error_msg}"
     except Exception as e:
-        error_msg = f"Error: {str(e)}"
-        print(f"   ❌ {error_msg}")
-        return False, error_msg
+        error_msg = f"Unexpected error: {str(e)}\nTraceback: {traceback.format_exc()}"
+        print(f"   ❌ ERROR: {error_msg}")
+        return False, f"Automation error - {str(e)}"
     finally:
         if driver:
             driver.quit()

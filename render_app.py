@@ -175,19 +175,47 @@ def perform_recharge():
         
         # EXACT SAME UPI METHOD AS LOCAL simple_recharge.py
         log_step(7, "ENTERING UPI ID FOR GOOGLE PAY", f"UPI ID: {UPI_ID}")
-        print("   ⏳ Waiting for VPA ID input field to appear...")
-        time.sleep(3)  # Wait for Google Pay form to load
+        print("   ⏳ Waiting for Google Pay form to load...")
+        time.sleep(5)  # Increased wait time for form to load
         
-        # Find VPA ID input field - using exact same method as simple_recharge.py
-        print("   🔍 Searching for VPA ID input field...")
-        upi_input = wait.until(
-            EC.element_to_be_clickable((By.XPATH, 
-                "//input[contains(@placeholder, 'VPA') or contains(@placeholder, 'vpa') or contains(@name, 'vpa') or contains(@id, 'vpa') or "
-                "contains(@placeholder, 'UPI') or contains(@placeholder, 'upi') or contains(@name, 'upi') or contains(@id, 'upi') or "
-                "contains(translate(@placeholder, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'enter vpa') or "
-                "contains(translate(@placeholder, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'enter upi')]"))
-        )
-        print(f"   ✓ Found VPA ID input field!")
+        # Debug: Check what's on the page
+        print(f"   🔍 Current URL: {driver.current_url}")
+        all_inputs = driver.find_elements(By.XPATH, "//input")
+        print(f"   📊 Found {len(all_inputs)} total input fields")
+        
+        # Find UPI input field - we know from debugging it has name='upi' or id='upi'
+        print("   🔍 Searching for UPI input field with name='upi' or id='upi'...")
+        upi_input = None
+        
+        try:
+            # Try to find by name='upi' or id='upi' (this is what we found in debugging)
+            upi_inputs = driver.find_elements(By.XPATH, "//input[@name='upi' or @id='upi']")
+            if upi_inputs:
+                # Take the first one that's visible
+                for inp in upi_inputs:
+                    if inp.is_displayed():
+                        upi_input = inp
+                        print(f"   ✓ Found UPI field: name='{inp.get_attribute('name')}', id='{inp.get_attribute('id')}'")
+                        break
+        except Exception as e:
+            print(f"   ⚠️  Error finding UPI field: {e}")
+        
+        if not upi_input:
+            # Fallback: try the broader search
+            print("   🔍 Trying broader VPA/UPI search...")
+            try:
+                upi_input = wait.until(
+                    EC.presence_of_element_located((By.XPATH, 
+                        "//input[contains(@placeholder, 'VPA') or contains(@placeholder, 'vpa') or contains(@name, 'vpa') or contains(@id, 'vpa') or "
+                        "contains(@placeholder, 'UPI') or contains(@placeholder, 'upi') or contains(@name, 'upi') or contains(@id, 'upi') or "
+                        "contains(translate(@placeholder, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'enter vpa') or "
+                        "contains(translate(@placeholder, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'enter upi')]"))
+                )
+                print(f"   ✓ Found VPA ID input field with broader search!")
+            except:
+                print("   ❌ Could not find UPI input field")
+                return False, "Timeout: UPI input field not found"
+        
         print(f"   ✓ Placeholder: {upi_input.get_attribute('placeholder')}")
         
         # Just paste the UPI ID directly - no clearing, no extra steps (EXACT SAME AS LOCAL)

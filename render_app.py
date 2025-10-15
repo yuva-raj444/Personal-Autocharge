@@ -176,7 +176,7 @@ def perform_recharge():
         # EXACT SAME UPI METHOD AS LOCAL simple_recharge.py
         log_step(7, "ENTERING UPI ID FOR GOOGLE PAY", f"UPI ID: {UPI_ID}")
         print("   ⏳ Waiting for Google Pay form to load...")
-        time.sleep(5)  # Increased wait time for form to load
+        time.sleep(10)  # Increased wait time for form to load (10 seconds for headless mode)
         
         # Debug: Check what's on the page
         print(f"   🔍 Current URL: {driver.current_url}")
